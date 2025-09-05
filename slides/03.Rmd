@@ -1,101 +1,178 @@
 ---
 engine: knitr
-title: Designing Your Application Layers
+title: Databases and Data APIs
 ---
 
 ## Learning objectives
 
-> Since these notes were prepared, this chapter has been split into two chapters. These notes have not been updated to reflect this change.
+- Understand how and learn how to access data from a database
 
-**Learning objectives:**
-
--   Compare and contrast the tiers of the three-tier app architecture vs the seven data science services.
--   Answer the two data-storage questions about an app: storage format and storage location.
--   Choose the appropriate storage solution for an app.
--   Authorize an app to access data.
--   Consider database-as-a-service options.
-
-## Perspectives on Data Science Projects {-}
-
--   DS vs SE Perspective
-
-    -   Data Flow Differences
-
-        ![DS Vs SE](images/ds_vs_se.PNG)
-
-    -   The software three-tier architecture vs the seven data science layers.
-
--   We as SE/DE think of systems as a puzzle pieces where each piece of the puzzle have to optimally fit/integrated with other puzzle pieces.
-
-## Productionizing apps {-}
-
--   Microservices and tight coupling (SRP OR SOC)
-
--   The Idea of abstraction in software engineering & It's relation to how we could create a good API.
-
--   **Important distinction**: Business Logic Vs App Logic
-
-    -   App Logic --\> is all about how the user interacts with the app
-
-    -   Business Logic --\>is all about the data inputs based on your business
-
--   What else comes to your mind when you move DS project to production?
-
-## The What & Where Questions of Storage {-}
-
--   What format would you use to store your data and why?
-
--   Where you gonna put your data?
-
-## Factors we should consider when we choose our storage solution {-}
-
--   Data Access patterns
-
-    -   on The App level
-
-    -   on The Data Pipeline Level
-
--   Data Security
-
--   How big are the data we're going to use inside our app?
-
-    ![](images/storage_space.PNG)
-
--   What are the performance criteria for the storage solution?
-
-    -   Throughput --\> how many units of information can be processed by a system within a given timeframe.
-
-    -   Latency --\> is the time it takes for data to pass from one point on a network to another.
-
-## Data authorization {-}
-
--   Don't allow all users to have access to all data.
-
--   Avoid ever putting credentials in plain-text.
-
--   Trivial approach of using `Sys` or `os` in R and Python.
-
--   RStudio Connect to the Rescue with an encryption option.
+- Understand how and learn how to access data from a a REST API
 
 ## Database-as-a-service {-}
 
 -   When to use what? **Database** vs **Datawarehouse** vs **Datalake**.
 
--   Recommended solutions: **EBS**, **RDS**, **Redshift** and **S3**.
+-   Recommended solutions: **EBS**, **RDS**, **Redshift** and **S3**. 
 
 -   Is that all we got? (**Hint**: Not even close!!).
 
-## Review {-}
+-   Be careful technology != concept/solution (for [storage](https://www.redhat.com/en/topics/data-storage/file-block-object-storage))
 
-Left those as an open discussion questions?
+## "meet the data where it lives" {-}
 
-| Learning Objective                                                                                    | What Did We Learn? |
-|------------------------------------|------------------------------------|
-| Compare and contrast the tiers of the three-tier app architecture vs the seven data science services. |                    |
-| Answer the two data-storage questions about an app: storage format and storage location.              |                    |
-| Choose the appropriate storage solution for an app.                                                   |                    |
-| Authorize an app to access data.                                                                      |                    |
-| Consider database-as-a-service options.                                                               |                    |
+- Flat files (csv. xls, parquet)
+
+- Databases
+
+- Web API (usually REST)
+
+- Other cases: videos, sensors, and users input (prob. more!) 
+
+## An easy Example 
+
+
+```bash
+#!/bin/bash
+
+db_set () {
+  echo "$1, $2" >> database 
+}
+
+db_get (){
+  grep "^$1," database | sed -e "s/^$1,//" | tail -n 1
+}
+```
+
+Very simple implementation[^1] with a lot of problems but...  it saves data and retrieves it!
+
+
+[^1]: Kleppmann, Martin, author. (2017). [Designing data-intensive applications : the big ideas behind reliable, scalable, and maintainable systems.](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/) Sebastopol, CA :O'Reilly Media
+
+## The Relational DataBase Management System (RDBMS)[^2]: 
+  
+Data Isolation: isolate both the OS and user/applications from data representations. 
+
+ - Table (relations) as a data structures 
+
+ - DBMS manages storage 
+
+ - DBMS provides a declarative language to access it
+
+ - Your applications are happy 😀 
+
+
+```{mermaid, DBMS, echo = FALSE, htmlLabels = FALSE}
+flowchart LR
+    A[Database Storage] --> B[Physical Schema] --> D[Logical Schema] --> E[Applications]
+```
+
+ 
+
+[^2]: CMU Database group, [Relational Model & Algebra (CMU Intro to Database Systems)](https://youtu.be/APqWIjtzNGE?si=AHdOjvsjs0vzFSr0)
+
+
+## Accessing and using databases
+
+In Python:  
+
+```python
+import psychopg2
+con = psycopg2.connect()
+import duckdb
+con = duckdb.connect('data/my-db.duckdb')
+```
+
+in R: 
+
+```R
+con <- DBI::dbConnect(RPostgres::postgres())
+con <- DBI::dbConnect(duckdb::duckdb()
+```
+
+R use DBI as an abstraction layer between multiple databases drivers. 
+
+The first argument is `drv`
+
+## Credentials 
+
+- Managing them is a pain (Bitwarden, 1password, OS keyring, GH secret, and moarrr!)
+
+- Logic creator > users > viewers
+
+- write / read 
+
+## APIs
+
+- They can be private (localhost) or public 
+
+- Python use `requests` and R use `httr/httr2` (apparently pronounced "hiter") 
+
+- Both are syntaxic sugar (around what?) 
+
+## We will mostly discuss [REST](https://en.wikipedia.org/wiki/REST) API
+
+- See [Web APIs for useRs](https://dru.quarto.pub/web-apis/#/section) from Umair
+
+- Based on http (protocole): 
+
+```{mermaid}
+flowchart LR
+    Server <--> API <--> Client 
+```
+
+- API have path (`/`) and endpoint(s) (`/ping`)
+
+- HTTP Verbs: 95% it will be GET and POST 
+
+## Request Parameters and Bodies
+
+- Defined at endpoint level
+
+- https://newton.now.sh/api/v2/abs/-10 
+
+- Usually you need to use a way to prove you have access: 
+
+    "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/run/@cf/meta/llama-3.1-8b-instruct-fast"
+
+## Request Status Codes
+
+- 20X: all Green
+
+- 4XX: "your fault!" (pb with request)
+
+- 5XX: "server fault"
+
+## Envt variables
+
+- .dotfiles (.Renviron/.Rprofile)
+
+- OS keyring / os.getenv() (os module)
+
+- token-based authorization schemes 
+
+
+## A package!
+
+```r 
+my_db_con <- function(
+    user = Sys.getenv("DB_USER"), 
+    pw = Sys.getenv("DB_PW"), 
+    ..., 
+    driver = RPostgres::Postgres()
+) {
+  DBI::dbConnect(
+    driver = driver,
+    dbname = 'my-db-name', 
+    host = 'my-db.example.com', 
+    port = 5432, 
+    user = user,
+    password = pw, 
+    ...
+  )
+}
+```
+
 
 ## Meeting Videos {-}
 
